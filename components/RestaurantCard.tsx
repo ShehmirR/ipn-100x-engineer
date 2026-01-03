@@ -36,6 +36,14 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
     }
   };
 
+  const formatTime = (time: string): string => {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       {/* Placeholder image area */}
@@ -64,10 +72,9 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
           📍 {restaurant.address}
         </p>
 
-        {/* TODO: Workshop Exercise 1 - Add opening hours display */}
-        {/* The data includes openingHours and closingHours fields */}
-        {/* Display them here with appropriate formatting */}
-        {/* Consider showing "Open Now" or "Closed" status */}
+        <p className="text-sm text-gray-600 mb-2">
+          🕒 {formatTime(restaurant.openingHours)} - {formatTime(restaurant.closingHours)}
+        </p>
 
         <p className="text-sm text-gray-500 line-clamp-2">{restaurant.description}</p>
 
