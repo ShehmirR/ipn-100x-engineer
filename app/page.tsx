@@ -1,18 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SearchForm from '@/components/SearchForm';
 import RestaurantCard from '@/components/RestaurantCard';
+import Header from '@/components/Header';
+import { useAuth } from '@/contexts/AuthContext';
 import { Restaurant } from '@/types/restaurant';
 
 // TODO: Workshop Exercise 5 - Improve UI with better styling
 // Consider adding animations, better loading states, and responsive design improvements
 
 export default function Home() {
+  const { user } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Load favorites when user logs in
+  useEffect(() => {
+    if (user) {
+      loadFavorites();
+    } else {
+      setFavorites([]);
+    }
+  }, [user]);
+
+  const loadFavorites = async () => {
+    try {
+      const response = await fetch('/api/restaurants/favorites');
+      if (response.ok) {
+        const data = await response.json();
+        setFavorites(data.favorites);
+      }
+    } catch (err) {
+      console.error('Error loading favorites:', err);
+    }
+  };
 
   const handleSearch = async (location: string) => {
     setLoading(true);
@@ -38,15 +63,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">🍽️ Restaurant Finder</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Find the best restaurants near you
-          </p>
-        </div>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -85,7 +102,12 @@ export default function Home() {
               {/* Currently the opening hours are available in the data but not displayed */}
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {restaurants.map((restaurant) => (
-                  <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+                  <RestaurantCard
+                    key={restaurant.id}
+                    restaurant={restaurant}
+                    isFavorite={favorites.includes(restaurant.id)}
+                    onFavoriteChange={loadFavorites}
+                  />
                 ))}
               </div>
             </div>

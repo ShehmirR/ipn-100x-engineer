@@ -1,66 +1,61 @@
-/**
- * UNUSED API ROUTE - Favorites Endpoint
- *
- * TODO: Workshop Exercise 2 - Find and remove dead code
- * This entire file is unused and should be removed or implemented properly
- *
- * This was intended to allow users to save favorite restaurants,
- * but the feature was never completed.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFavorites, addFavorite, removeFavorite } from '@/utils/storage';
 
-// In-memory storage for favorites (would use a database in production)
-const favorites: Map<string, string[]> = new Map();
-
-console.log('Favorites API module loaded'); // Dead code - runs on import
+// Helper to get user ID from session
+function getUserIdFromSession(request: NextRequest): string | null {
+  return request.cookies.get('session')?.value || null;
+}
 
 // GET - Retrieve user's favorite restaurants
 export async function GET(request: NextRequest) {
-  console.log('GET /api/restaurants/favorites called'); // Dead code
+  try {
+    const userId = getUserIdFromSession(request);
 
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
-  if (!userId) {
+    const favorites = getUserFavorites(userId);
+
+    return NextResponse.json({
+      favorites,
+      count: favorites.length,
+    });
+  } catch (error) {
+    console.error('Error fetching favorites:', error);
     return NextResponse.json(
-      { error: 'userId is required' },
-      { status: 400 }
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
-
-  const userFavorites = favorites.get(userId) || [];
-
-  console.log(`User ${userId} has ${userFavorites.length} favorites`); // Dead code
-
-  return NextResponse.json({
-    favorites: userFavorites,
-    count: userFavorites.length,
-  });
 }
 
 // POST - Add a restaurant to favorites
 export async function POST(request: NextRequest) {
-  console.log('POST /api/restaurants/favorites called'); // Dead code
-
   try {
-    const body = await request.json();
-    const { userId, restaurantId } = body;
+    const userId = getUserIdFromSession(request);
 
-    if (!userId || !restaurantId) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'userId and restaurantId are required' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { restaurantId } = body;
+
+    if (!restaurantId) {
+      return NextResponse.json(
+        { error: 'restaurantId is required' },
         { status: 400 }
       );
     }
 
-    const userFavorites = favorites.get(userId) || [];
-
-    if (!userFavorites.includes(restaurantId)) {
-      userFavorites.push(restaurantId);
-      favorites.set(userId, userFavorites);
-      console.log(`Added ${restaurantId} to favorites for user ${userId}`); // Dead code
-    }
+    addFavorite(userId, restaurantId);
 
     return NextResponse.json({
       success: true,
@@ -77,28 +72,27 @@ export async function POST(request: NextRequest) {
 
 // DELETE - Remove a restaurant from favorites
 export async function DELETE(request: NextRequest) {
-  console.log('DELETE /api/restaurants/favorites called'); // Dead code
-
   try {
+    const userId = getUserIdFromSession(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const restaurantId = searchParams.get('restaurantId');
 
-    if (!userId || !restaurantId) {
+    if (!restaurantId) {
       return NextResponse.json(
-        { error: 'userId and restaurantId are required' },
+        { error: 'restaurantId is required' },
         { status: 400 }
       );
     }
 
-    const userFavorites = favorites.get(userId) || [];
-    const index = userFavorites.indexOf(restaurantId);
-
-    if (index > -1) {
-      userFavorites.splice(index, 1);
-      favorites.set(userId, userFavorites);
-      console.log(`Removed ${restaurantId} from favorites for user ${userId}`); // Dead code
-    }
+    removeFavorite(userId, restaurantId);
 
     return NextResponse.json({
       success: true,
@@ -111,19 +105,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Unused helper function
-function validateUserId(userId: string): boolean {
-  // Would validate user ID format
-  return userId.length > 0 && userId.length < 100;
-}
-
-// Another unused helper
-function formatFavoritesResponse(restaurantIds: string[]) {
-  return {
-    favorites: restaurantIds,
-    count: restaurantIds.length,
-    lastUpdated: new Date().toISOString(),
-  };
 }

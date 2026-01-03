@@ -1,10 +1,70 @@
+'use client';
+
+import { useState } from 'react';
 import { Restaurant } from '@/types/restaurant';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
+  isFavorite?: boolean;
+  onFavoriteChange?: () => void;
 }
 
-export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
+export default function RestaurantCard({
+  restaurant,
+  isFavorite = false,
+  onFavoriteChange
+}: RestaurantCardProps) {
+  const { user } = useAuth();
+  const [favorited, setFavorited] = useState(isFavorite);
+  const [loading, setLoading] = useState(false);
+
+  const handleFavoriteToggle = async () => {
+    if (!user) {
+      alert('Please log in to save favorites');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (favorited) {
+        // Remove from favorites
+        const response = await fetch(
+          `/api/restaurants/favorites?restaurantId=${restaurant.id}`,
+          { method: 'DELETE' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to remove favorite');
+        }
+
+        setFavorited(false);
+      } else {
+        // Add to favorites
+        const response = await fetch('/api/restaurants/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restaurantId: restaurant.id }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add favorite');
+        }
+
+        setFavorited(true);
+      }
+
+      if (onFavoriteChange) {
+        onFavoriteChange();
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert('Failed to update favorite. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderStars = (rating: number) => {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
@@ -79,6 +139,18 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
         <div className="mt-4 flex gap-2">
           <button className="flex-1 px-3 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
             View Details
+          </button>
+          <button
+            onClick={handleFavoriteToggle}
+            disabled={loading}
+            className={`px-3 py-2 text-sm border rounded transition-colors ${
+              favorited
+                ? 'bg-red-50 border-red-500 text-red-500 hover:bg-red-100'
+                : 'border-gray-300 hover:bg-gray-50'
+            } disabled:opacity-50`}
+            title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {favorited ? '❤️' : '🤍'}
           </button>
           <button className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors">
             📞
